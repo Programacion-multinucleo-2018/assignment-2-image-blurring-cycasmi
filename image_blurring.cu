@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cmath>
+#include <chrono>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -20,10 +21,9 @@ using namespace std;
 
 // input - input image one dimensional array
 // ouput - output image one dimensional array
-// width, height - width and height of the images
+// width, height - width and height of the images (cols, rows)
 // colorWidthStep - number of color bytes (cols * colors)
-// grayWidthStep - number of gray bytes 
-__global__ void blur_kernel(unsigned char* input, unsigned char* output, int width, int height, int colorWidthStep, int grayWidthStep)
+__global__ void blur_kernel(unsigned char* input, unsigned char* output, int width, int height, int colorWidthStep)
 {
 	//pixel margin for blur matrix
 	const unsigned int marginSize = 2;
@@ -47,8 +47,8 @@ __global__ void blur_kernel(unsigned char* input, unsigned char* output, int wid
 		if ((xIndex >= marginSize) && (yIndex >= marginSize) && (xIndex < width - marginSize) && (yIndex < height - marginSize))
 		{
 			int index = 0;
-			
-			//Average pixel color calculation
+
+			//Average pixel color calculation (blurring)
 			for (int i = xIndex - marginSize; i <= xIndex + marginSize; i++)
 			{
 				for (int j = yIndex - marginSize; j <= yIndex + marginSize; j++)
@@ -72,7 +72,6 @@ __global__ void blur_kernel(unsigned char* input, unsigned char* output, int wid
 			out_green = input[input_tid + 1];
 			out_red = input[input_tid + 2];
 		}
-
 		output[output_tid] = static_cast<unsigned char>(out_blue);
 		output[output_tid+1] = static_cast<unsigned char>(out_green);
 		output[output_tid+2] = static_cast<unsigned char>(out_red);
@@ -82,39 +81,45 @@ __global__ void blur_kernel(unsigned char* input, unsigned char* output, int wid
 void blur_image(const cv::Mat& input, cv::Mat& output)
 {
 	cout << "Input image step: " << input.step << " rows: " << input.rows << " cols: " << input.cols << endl;
+	
 	// Calculate total number of bytes of input and output image
 	// Step = cols * number of colors	
-	size_t colorBytes = input.step * input.rows;
-	size_t grayBytes = output.step * output.rows;
+	size_t inputBytes = input.step * input.rows;
+	size_t outputBytes = output.step * output.rows;
 
 	unsigned char *d_input, *d_output;
 
 	// Allocate device memory
-	SAFE_CALL(cudaMalloc<unsigned char>(&d_input, colorBytes), "CUDA Malloc Failed");
-	SAFE_CALL(cudaMalloc<unsigned char>(&d_output, grayBytes), "CUDA Malloc Failed");
+	SAFE_CALL(cudaMalloc<unsigned char>(&d_input, inputBytes), "CUDA Malloc Failed");
+	SAFE_CALL(cudaMalloc<unsigned char>(&d_output, outputBytes), "CUDA Malloc Failed");
 
 	// Copy data from OpenCV input image to device memory
-	SAFE_CALL(cudaMemcpy(d_input, input.ptr(), colorBytes, cudaMemcpyHostToDevice), "CUDA Memcpy Host To Device Failed");
+	SAFE_CALL(cudaMemcpy(d_input, input.ptr(), inputBytes, cudaMemcpyHostToDevice), "CUDA Memcpy Host To Device Failed");
 
 	// Specify a reasonable block size
 	const dim3 block(16, 16);
 
 	// Calculate grid size to cover the whole image
-	// const im3 grid((input.cols + block.x - 1) / block.x, (input.rows + block.y - 1) / block.y);
 	const dim3 grid((int)ceil((float)input.cols / block.x), (int)ceil((float)input.rows/ block.y));
 	printf("blur_kernel<<<(%d, %d) , (%d, %d)>>>\n", grid.x, grid.y, block.x, block.y);
-	
+
+	chrono::duration<float, std::milli> duration_ms = chrono::high_resolution_clock::duration::zero();
+	auto start_gpu =  chrono::high_resolution_clock::now();
 	// Launch the color conversion kernel
-	blur_kernel <<<grid, block >>>(d_input, d_output, input.cols, input.rows, static_cast<int>(input.step), static_cast<int>(output.step));
+	blur_kernel <<<grid, block >>>(d_input, d_output, input.cols, input.rows, static_cast<int>(input.step));
+
+	auto end_gpu =  chrono::high_resolution_clock::now();
+	duration_ms = end_gpu - start_gpu;
+	printf("GPU Image blurring elapsed %f ms\n", duration_ms.count());
 
 	// Synchronize to check for any kernel launch errors
 	SAFE_CALL(cudaDeviceSynchronize(), "Kernel Launch Failed");
 
 	// Copy back data from destination device meory to OpenCV output image
-	SAFE_CALL(cudaMemcpy(output.ptr(), d_output, grayBytes, cudaMemcpyDeviceToHost), "CUDA Memcpy Host To Device Failed");
+	SAFE_CALL(cudaMemcpy(output.ptr(), d_output, outputBytes, cudaMemcpyDeviceToHost), "CUDA Memcpy Host To Device Failed");
 
 	//Save resultant image
-	cv::imwrite("Altered_Image.jpg", output);
+	cv::imwrite("GPU_Altered_Image.jpg", output);
 
 	// Free the device memory
 	SAFE_CALL(cudaFree(d_input), "CUDA Free Failed");
@@ -140,8 +145,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	cv::Mat output
-	(input.rows, input.cols, input.type());
+	cv::Mat output(input.rows, input.cols, input.type());
 
 	//Call the wrapper function
 	blur_image(input, output);
