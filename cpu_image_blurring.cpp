@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 	printf("CPU image blurring elapsed %f ms\n\n", duration_ms.count());
 
 	/* ********* DISPLAY IMAGES **********/
-	/*//Allow the windows to resize
+	//Allow the windows to resize
 	namedWindow("CPU INPUT", cv::WINDOW_NORMAL);
 	namedWindow("CPU OUTPUT", cv::WINDOW_NORMAL);
 
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 
 	//Wait for key press
 	cv::waitKey();
-	*/
+	
 
 	// OMP CPU TEST
 	duration_ms = chrono::high_resolution_clock::duration::zero();
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 	printf("OMP image blurring elapsed %f ms\n\n", duration_ms.count());
 
 	/* ********* DISPLAY IMAGES **********/
-	/*//Allow the windows to resize
+	//Allow the windows to resize
 	namedWindow("OMP INPUT", cv::WINDOW_NORMAL);
 	namedWindow("OMP OUTPUT", cv::WINDOW_NORMAL);
 
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
 
 	//Wait for key press
 	cv::waitKey();
-	*/
+	
 
 	return 0;	
 }
