@@ -14,7 +14,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "../common/common.h"
+#include "common.h"
 #include <cuda_runtime.h>
 
 using namespace std;
