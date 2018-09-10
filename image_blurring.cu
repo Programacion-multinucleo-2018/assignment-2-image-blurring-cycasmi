@@ -97,7 +97,7 @@ void blur_image(const cv::Mat& input, cv::Mat& output)
 	SAFE_CALL(cudaMemcpy(d_input, input.ptr(), inputBytes, cudaMemcpyHostToDevice), "CUDA Memcpy Host To Device Failed");
 
 	// Specify a reasonable block size
-	const dim3 block(16, 16);
+	const dim3 block(64, 2);
 
 	// Calculate grid size to cover the whole image
 	const dim3 grid((int)ceil((float)input.cols / block.x), (int)ceil((float)input.rows/ block.y));
