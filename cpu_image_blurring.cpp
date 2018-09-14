@@ -39,14 +39,15 @@ void OMP_blur_image(const cv::Mat& M_input, cv::Mat& M_output)
 	int index, out_index;
 	for (int i = 0; i < M_input.cols; i++)
 	{
-		out_blue = 0;
-		out_green = 0;
-		out_red = 0;
+
 		for (int j = 0; j < M_input.rows; j++)
 		{
 
 			if ((i >= marginSize) && (j >= marginSize) && (i < M_input.cols - marginSize) && (j < M_input.rows - marginSize))
 			{
+				out_blue = 0;
+				out_green = 0;
+				out_red = 0;
 				index = 0;
 				#pragma omp parallel for collapse(2) default(shared) reduction (+:out_blue, out_green, out_red)
 				//Average pixel color calculation
@@ -104,14 +105,15 @@ void CPU_blur_image(const cv::Mat& M_input, cv::Mat& M_output)
 	int index, out_index;
 	for (int i = 0; i < M_input.cols; i++)
 	{
-		out_blue = 0;
-		out_green = 0;
-		out_red = 0;
+
 		for (int j = 0; j < M_input.rows; j++)
 		{
 
 			if ((i >= marginSize) && (j >= marginSize) && (i < M_input.cols - marginSize) && (j < M_input.rows - marginSize))
 			{
+				out_blue = 0;
+				out_green = 0;
+				out_red = 0;
 				index = 0;
 				//Average pixel color calculation
 				for (int m_i = i - marginSize; m_i <= i + marginSize; m_i++)
